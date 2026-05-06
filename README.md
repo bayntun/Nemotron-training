@@ -6,7 +6,7 @@ Submission pipeline for the [NVIDIA Nemotron Model Reasoning Challenge](https://
 Best Data/Synthetic Data Method Open Contribution Award) or Path A (top 5-8
 final leaderboard via cascade for solo competitors).
 
-Plan document: `c:\Users\bayntuna\.cursor\plans\nemotron-reasoning-leaderboard_213b4970.plan.md`.
+**Plan document (in-repo):** [docs/NEMOTRON_PLAN.md](docs/NEMOTRON_PLAN.md).
 
 ## Repo layout
 
@@ -89,7 +89,7 @@ python -m submit.package --adapter ./adapters/sft_baseline --out submission.zip
 
 ## Phase status
 
-- [x] Phase 0: foundation, grader port, scaffolding (in progress)
+- [x] Phase 0: foundation, grader port, scaffolding (**repo commit `e81f24f`**; HF download + Kaggle smoke still open — see [docs/NEMOTRON_PLAN.md](docs/NEMOTRON_PLAN.md))
 - [ ] Phase 1: SFT baseline + end-of-week-1 leaderboard submission milestone
 - [ ] Phase 2: solver-guided synthetic data (centerpiece, both paths)
 - [ ] Phase 3: rank-128 teacher -> SVD-init -> KD into rank-32 student (Path A booster)
