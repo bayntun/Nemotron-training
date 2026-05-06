@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtualenv / venv
+.venv/
+venv/
+env/
+ENV/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+
+# Secrets and local config
+.env
+.env.local
+*.key
+*.pem
+
+# Data files (download via scripts; do not commit)
+data/raw/
+data/cleaned/
+data/synthetic/
+data/cache/
+*.jsonl
+*.parquet
+*.arrow
+
+# Models / adapters / submissions
+models/
+adapters/
+checkpoints/
+outputs/
+runs/
+wandb/
+submission*.zip
+adapter_model.safetensors
+*.bin
+*.safetensors
+
+# Logs
+logs/
+*.log
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Allow tracked example/sample fixtures (small, used for tests)
+!eval/fixtures/*.jsonl
+!solvers/fixtures/*.jsonl

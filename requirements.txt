@@ -1,0 +1,26 @@
+# Common dependencies for local development on Windows / Linux.
+# Server-side training deps (torch, vllm, peft, bitsandbytes, deepspeed, trl)
+# are installed separately on the V100 server -- see requirements-train.txt.
+
+# Data + datasets
+datasets>=2.20.0
+huggingface_hub>=0.25.0
+
+# HTTP client for DeepSeek and other APIs
+httpx>=0.27.0
+tenacity>=8.5.0
+
+# Config + env
+python-dotenv>=1.0.0
+pydantic>=2.7.0
+
+# Tokenizers (CPU-only path, for prompt-length checks and chat templating)
+transformers>=4.46.0
+tokenizers>=0.20.0
+
+# Eval / testing
+pytest>=8.0.0
+pytest-xdist>=3.6.0
+
+# Code quality
+ruff>=0.6.0

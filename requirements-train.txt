@@ -1,0 +1,37 @@
+# Server-side training dependencies (4x V100 32GB Linux box).
+# Install on top of requirements.txt.
+#
+# IMPORTANT for V100 (Volta, sm_70):
+#   - No bf16 support -- must use fp16 with grad scaler.
+#   - No flash-attn v3.
+#   - flash-attn v2 works on Volta but pin to a Volta-compatible build.
+#   - Install torch with the right CUDA version for your driver
+#     (typically cu121 or cu118 for V100 boxes).
+#
+# Install order:
+#   pip install -r requirements.txt
+#   pip install -r requirements-train.txt
+#
+# DO NOT install unsloth on this machine -- the public solution flagged a
+# known hang on Nemotron-3-Nano-30B-A3B's 5980 modules. Use peft + TRL directly.
+
+torch>=2.4.0,<2.6.0
+transformers>=4.46.0,<4.50.0
+accelerate>=0.34.0
+peft>=0.13.0
+bitsandbytes>=0.44.0
+trl>=0.11.0
+deepspeed>=0.15.0
+safetensors>=0.4.5
+sentencepiece>=0.2.0
+einops>=0.8.0
+
+# vLLM for greedy eval harness (server-side; matches the Kaggle scoring kernel).
+# Pin to a version that supports max_lora_rank=32 and the Nemotron-H architecture.
+vllm>=0.6.4
+
+# Optional: flash-attn v2 for V100 -- install separately if needed.
+# pip install flash-attn==2.6.3 --no-build-isolation
+
+# Optional: experiment tracking
+wandb>=0.18.0
