@@ -29,6 +29,8 @@ ENV/
 # Secrets and local config
 .env
 .env.local
+# Notebook/local overrides (tracked example: bootstrap/secrets_local.env.example)
+bootstrap/secrets_local.env
 *.key
 *.pem
 
