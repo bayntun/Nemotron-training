@@ -4,6 +4,24 @@ Use this when **training runs on your Linux GPU box** (e.g. 4× V100) and you ac
 
 The notebook **`bootstrap/remote_preflight.ipynb`** already supports JupyterHub paths (`/home/jovyan/...`), GPU checks, clone/verify, CONFIG, grader tests, and HF/DeepSeek smoke steps. Treat this doc as the **checklist** around that notebook.
 
+## SSH from your laptop
+
+Training server (LAN): **`192.168.220.200`**. Linux login: **`abayntun`** (SSH key auth expected).
+
+```bash
+ssh abayntun@192.168.220.200
+```
+
+You must be **on the same network or VPN** as that subnet; automated agents or CI outside your LAN will usually **timeout** here.
+
+From this repo on your PC (example pull on the server):
+
+```bash
+ssh abayntun@192.168.220.200 "cd ~/work/Nemotron-training && git pull"
+```
+
+Adjust `~/work/Nemotron-training` if you cloned elsewhere.
+
 ## One-time setup
 
 1. **Clone the repo** somewhere under your persistent home (typical Hub layouts use `/home/jovyan/work`):
