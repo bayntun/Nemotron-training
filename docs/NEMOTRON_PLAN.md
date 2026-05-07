@@ -10,7 +10,7 @@ Cursor may also hold a mirror under `.cursor/plans/`; treat **this** path as the
 | Phase | Status | Notes |
 |-------|--------|--------|
 | **Phase 0 — Foundation** | **Mostly complete** | Code + tests + packaging in repo; HF download + Kaggle smoke submission still on you |
-| Phase 1 — SFT baseline | Not started | `train/sft.py` TBD |
+| Phase 1 — SFT baseline | In progress | `train/sft.py` + `configs/accelerate_zero2.yaml` (validate on GPU, tune batch/ZeRO) |
 | Phase 2 — Solvers + synthetic data | Not started | `solvers/*.py` TBD |
 | Phase 3 — High-rank → SVD → KD | Not started | Optional Path A booster |
 | Phase 4 — Notebook + submission | Not started | Path B deliverable |
@@ -190,4 +190,4 @@ Artifacts: `submission.zip` + public Kaggle notebook + write-up + Open Contribut
 - **V100 server:** Linux + adequate interconnect — **confirmed** by team.
 - **DeepSeek API:** account + key — **confirmed** set up.
 
-Remaining operational items: HF ToS + `python -m data.download`, then Phase 1 training scripts.
+Remaining operational items: HF ToS + `python -m data.download`, then GPU validation + tuning of `python -m train.sft` (see `train/README.md`).

@@ -103,6 +103,7 @@ The CONFIG paths in `remote_preflight.ipynb` pick up `bootstrap/secrets_local.en
 4. **Git clone** cell: skip if the repo is already this checkout; or point clone URL at your fork.
 5. Run **CONFIG** / env checks, then **`pytest`** / grader cells as listed in the notebook.
 6. When Phase 0 data steps are ready: in a terminal with venv activated, run `python -m data.download` and `python -m teacher.smoke_test`.
+7. Phase 1: see [`train/README.md`](../train/README.md) — `python -m train.sft --output-dir ...` or `accelerate launch` with [`configs/accelerate_zero2.yaml`](../configs/accelerate_zero2.yaml).
 
 ## Training vs notebooks
 

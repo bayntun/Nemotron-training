@@ -93,7 +93,7 @@ python -m submit.package --adapter ./adapters/sft_baseline --out submission.zip
 ## Phase status
 
 - [x] Phase 0: foundation, grader port, scaffolding (**repo commit `e81f24f`**; HF download + Kaggle smoke still open — see [docs/NEMOTRON_PLAN.md](docs/NEMOTRON_PLAN.md))
-- [ ] Phase 1: SFT baseline + end-of-week-1 leaderboard submission milestone
+- [ ] Phase 1: SFT baseline + leaderboard milestone (**`train/sft.py`** + DeepSpeed configs in repo — run and tune on GPU server) — see [train/README.md](train/README.md)
 - [ ] Phase 2: solver-guided synthetic data (centerpiece, both paths)
 - [ ] Phase 3: rank-128 teacher -> SVD-init -> KD into rank-32 student (Path A booster)
 - [ ] Phase 4: public notebook + write-up + final submission (Path B deliverable)
