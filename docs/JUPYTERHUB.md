@@ -6,21 +6,50 @@ The notebook **`bootstrap/remote_preflight.ipynb`** already supports JupyterHub 
 
 ## SSH from your laptop
 
-Training server (LAN): **`192.168.220.200`**. Linux login: **`abayntun`** (SSH key auth expected).
+Training server (LAN): **`192.168.220.200`**, hostname **`tashpc`**, Linux user **`abayntun`**. You must be **on the same network or VPN** as that subnet.
+
+### Interactive login
 
 ```bash
 ssh abayntun@192.168.220.200
 ```
 
-You must be **on the same network or VPN** as that subnet; automated agents or CI outside your LAN will usually **timeout** here.
+That often prompts for a **password** unless your client picks up the right key automatically.
 
-From this repo on your PC (example pull on the server):
+### Passwordless SSH (recommended)
 
-```bash
-ssh abayntun@192.168.220.200 "cd ~/work/Nemotron-training && git pull"
+On **Windows**, OpenSSH keys usually live under **`%USERPROFILE%\.ssh\`**. For this workspace, passwordless login uses the Ed25519 pair:
+
+| File | Purpose |
+|------|--------|
+| **`id_ed25519_cursor`** | Private key (never commit or share) |
+| **`id_ed25519_cursor.pub`** | Public key (installed in `abayntun@tashpc:~/.ssh/authorized_keys`) |
+
+Point SSH at that key with **`~/.ssh/config`** (local file, not in git), for example:
+
+```sshconfig
+Host tashpc-cursor
+  HostName 192.168.220.200
+  User abayntun
+  IdentityFile ~/.ssh/id_ed25519_cursor
+  IdentitiesOnly yes
 ```
 
-Adjust `~/work/Nemotron-training` if you cloned elsewhere.
+Then:
+
+```bash
+ssh tashpc-cursor
+```
+
+Use that **`Host`** name for scripts and Cursor terminals so batch commands do not hang on a password prompt.
+
+### Remote commands from your PC
+
+```bash
+ssh tashpc-cursor "cd ~/work/Nemotron-training && git pull"
+```
+
+Adjust the path if you cloned elsewhere.
 
 ## One-time setup
 
