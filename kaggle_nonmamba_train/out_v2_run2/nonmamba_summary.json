@@ -1,0 +1,60 @@
+{
+  "results": [
+    {
+      "name": "a",
+      "perplexity": 1.389,
+      "eval_rows": 120,
+      "tokens_per_sec": 35337,
+      "max_memory_gb": 1.36,
+      "config": {
+        "name": "a",
+        "max_length": 384,
+        "batch": 1,
+        "grad_accum": 4,
+        "epochs": 0.5
+      }
+    },
+    {
+      "name": "b",
+      "perplexity": 1.284,
+      "eval_rows": 120,
+      "tokens_per_sec": 46174,
+      "max_memory_gb": 1.47,
+      "config": {
+        "name": "b",
+        "max_length": 512,
+        "batch": 1,
+        "grad_accum": 4,
+        "epochs": 0.5
+      }
+    },
+    {
+      "name": "c",
+      "perplexity": 1.283,
+      "eval_rows": 120,
+      "tokens_per_sec": 65878,
+      "max_memory_gb": 1.89,
+      "config": {
+        "name": "c",
+        "max_length": 512,
+        "batch": 2,
+        "grad_accum": 2,
+        "epochs": 0.5
+      }
+    }
+  ],
+  "best": {
+    "name": "c",
+    "perplexity": 1.283,
+    "eval_rows": 120,
+    "tokens_per_sec": 65878,
+    "max_memory_gb": 1.89,
+    "config": {
+      "name": "c",
+      "max_length": 512,
+      "batch": 2,
+      "grad_accum": 2,
+      "epochs": 0.5
+    }
+  }
+}
