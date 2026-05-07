@@ -42,11 +42,14 @@ final leaderboard via cascade for solo competitors).
 
 - **Local Windows dev box** (this machine): orchestration, data prep,
   solver code, eval harness writing, packaging. No GPU work.
-- **4x Tesla V100 32 GB Linux server**: Phase 1 SFT, Phase 2 retrains,
-  Phase 3 high-rank teacher + KD. fp16 only (Volta, no bf16).
+- **4x Tesla V100 Linux server** (16 GB or 32 GB per GPU depending on box):
+  Phase 1 SFT, Phase 2 retrains, Phase 3 high-rank teacher + KD.
+  **fp16 only** on Volta (no bf16). Primary access via **JupyterHub**:
+  see [docs/JUPYTERHUB.md](docs/JUPYTERHUB.md) and
+  `bootstrap/remote_preflight.ipynb`.
 - **Kaggle Blackwell 96 GB notebook (30 hr/week)**: kernel-identical eval,
   `submission.zip` building, public notebook hosting. Reserved for
-  Kaggle-only work; not used for teacher hosting.
+  Kaggle-only work; fallback if MoE-on-V100 blocks training (see plan).
 
 ## Setup (Windows dev box)
 

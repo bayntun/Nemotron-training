@@ -1,6 +1,7 @@
 # Bootstrap
 
-- **`remote_preflight.ipynb`** — run on JupyterHub to validate GPU, clone repo, run grader tests, and smoke-test HF + DeepSeek.
+- **`remote_preflight.ipynb`** — run on **JupyterHub** (training server) or **Kaggle** to validate GPU, repo layout, grader tests, and HF + DeepSeek smoke checks.
+- **Server checklist:** [docs/JUPYTERHUB.md](../docs/JUPYTERHUB.md) (venv, kernel, secrets, which cells apply off-Kaggle).
 
 ## Secrets
 

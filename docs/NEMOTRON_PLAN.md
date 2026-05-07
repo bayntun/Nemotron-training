@@ -66,7 +66,7 @@ Removed from scope:
 - Submission: `submission.zip` containing PEFT LoRA + `adapter_config.json` + `adapter_model.safetensors` at zip root.
 - Metric: greedy → `extract_final_answer` (boxed-first, heuristic fallbacks) → numeric path with `math.isclose(rel_tol=1e-2, abs_tol=1e-5)` if both sides parse as float, otherwise case-insensitive string equality. **No whitespace normalization beyond `.strip()` on stored vs predicted** — leading zeros, signs, units, decimal precision must match exactly for non-numeric paths.
 - Public Kaggle notebook + write-up are mandatory for prize eligibility.
-- Hardware: 4x Tesla V100 32GB (Volta, fp16 only, no bf16/fp8, no flash-attn v3) + Kaggle Blackwell 96GB notebook (30 hr/week).
+- Hardware: 4× Tesla V100 (Volta, fp16 only, no bf16/fp8, no flash-attn v3); typically reached via **JupyterHub** — [JUPYTERHUB.md](JUPYTERHUB.md). Kaggle Blackwell 96GB notebook (30 hr/week) for kernel eval / fallback.
 - Competition deadlines: see [Kaggle timeline](https://www.kaggle.com/competitions/nvidia-nemotron-model-reasoning-challenge) (final submission typically mid-June).
 
 ---
