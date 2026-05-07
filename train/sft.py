@@ -78,6 +78,12 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Use target_modules in_proj/out_proj + layers_to_transform instead of regex.",
     )
+    p.add_argument(
+        "--target-modules",
+        type=str,
+        default=None,
+        help="Comma-separated LoRA target module names (overrides default Nemotron targets).",
+    )
     p.add_argument("--no-thinking-template", action="store_true", help="Disable enable_thinking in chat template.")
     p.add_argument("--attn-implementation", type=str, default="sdpa", choices=("sdpa", "eager"))
     p.add_argument("--optim", type=str, default="paged_adamw_8bit")
@@ -198,7 +204,21 @@ def main() -> int:
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, **model_init_kw)
 
-    if args.peft_simple_targets:
+    custom_targets = None
+    if args.target_modules:
+        custom_targets = [x.strip() for x in args.target_modules.split(",") if x.strip()]
+
+    if custom_targets:
+        peft_config = LoraConfig(
+            r=args.lora_r,
+            lora_alpha=args.lora_alpha,
+            lora_dropout=args.lora_dropout,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=custom_targets,
+            init_lora_weights=args.lora_init,
+        )
+    elif args.peft_simple_targets:
         peft_config = LoraConfig(
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
@@ -235,8 +255,6 @@ def main() -> int:
         optim=args.optim,
         max_length=args.max_length,
         packing=False,
-        assistant_only_loss=True,
-        shuffle_dataset=True,
         seed=args.seed,
         report_to=[],
     )
