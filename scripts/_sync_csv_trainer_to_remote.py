@@ -23,6 +23,7 @@ FILES = [
     "train/test_csv_equation_shape_hint.py",
     "scripts/run_v100_csv_train_4gpu.sh",
     "scripts/analyze_eval_failures.py",
+    "scripts/analyze_hint_uptake.py",
     "scripts/_launch_csv_v6_encrypt_equation_remote.py",
 ]
 
