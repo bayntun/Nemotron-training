@@ -91,6 +91,22 @@ def parse_args() -> argparse.Namespace:
             "`A -> B` examples and a parsable query string (cipher / string-transform family)."
         ),
     )
+    p.add_argument(
+        "--inject-encrypt-lexical-hint",
+        type=str,
+        default="none",
+        choices=("none", "auto"),
+        help=(
+            "Decrypt/cipher: vocabulary + word-count hints from `->` example lines and the final ciphertext query."
+        ),
+    )
+    p.add_argument(
+        "--inject-equation-shape-hint",
+        type=str,
+        default="none",
+        choices=("none", "auto"),
+        help="Equation / operator rows: RHS length-shape hint from `lhs = rhs` example lines (skips encrypt prompts).",
+    )
     return p.parse_args()
 
 
@@ -104,11 +120,12 @@ def unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
 
 def main() -> int:
     args_in = parse_args()
-    from train.csv_cipher_length_hint import augment_prompt_for_cipher_length_hint
-    from train.csv_numeric_baseline import augment_prompt_for_numeric_baseline
+    from train.csv_prompt_augment import augment_csv_user_prompt
 
     strat = args_in.inject_numeric_baseline
     cipher_strat = args_in.inject_cipher_length_hint
+    encrypt_strat = args_in.inject_encrypt_lexical_hint
+    equation_strat = args_in.inject_equation_shape_hint
     train_csv = Path(args_in.train_csv)
     out_dir = Path(args_in.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -128,6 +145,8 @@ def main() -> int:
                     "eval_rows": len(test_rows),
                     "inject_numeric_baseline": strat,
                     "inject_cipher_length_hint": cipher_strat,
+                    "inject_encrypt_lexical_hint": encrypt_strat,
+                    "inject_equation_shape_hint": equation_strat,
                 },
                 ensure_ascii=False,
             ),
@@ -186,8 +205,13 @@ def main() -> int:
         )
 
     def _pack_row(r: dict[str, str]) -> str:
-        p = augment_prompt_for_numeric_baseline(r["prompt"], strat)  # type: ignore[arg-type]
-        p = augment_prompt_for_cipher_length_hint(p, cipher_strat)  # type: ignore[arg-type]
+        p = augment_csv_user_prompt(
+            r["prompt"],
+            numeric=strat,
+            cipher=cipher_strat,
+            encrypt=encrypt_strat,
+            equation=equation_strat,
+        )
         return f"User: {p}\nAssistant: {r['answer']}"
 
     train_text = [_pack_row(r) for r in train_rows]
@@ -253,8 +277,13 @@ def main() -> int:
         correct_full = 0
         correct_first = 0
         for row in test_rows:
-            prompt = augment_prompt_for_numeric_baseline(row["prompt"], strat)  # type: ignore[arg-type]
-            prompt = augment_prompt_for_cipher_length_hint(prompt, cipher_strat)  # type: ignore[arg-type]
+            prompt = augment_csv_user_prompt(
+                row["prompt"],
+                numeric=strat,
+                cipher=cipher_strat,
+                encrypt=encrypt_strat,
+                equation=equation_strat,
+            )
             gt = str(row["answer"]).strip()
             gt_first = (gt.split()[0] if gt else "").strip()
             inp = tok(f"User: {prompt}\nAssistant:", return_tensors="pt").to(dev)
@@ -270,6 +299,7 @@ def main() -> int:
             rec = {
                 "id": row.get("id"),
                 "prompt": row.get("prompt", "")[:2000],
+                "prompt_augmented": prompt[:6000],
                 "gt": gt,
                 "pred": pred,
                 "gen_full": gen_line,
@@ -296,6 +326,8 @@ def main() -> int:
             "lora_r": args_in.lora_r,
             "inject_numeric_baseline": strat,
             "inject_cipher_length_hint": cipher_strat,
+            "inject_encrypt_lexical_hint": encrypt_strat,
+            "inject_equation_shape_hint": equation_strat,
             "accuracy_full": acc_full,
             "correct_full": correct_full,
             "accuracy_first": acc_first,

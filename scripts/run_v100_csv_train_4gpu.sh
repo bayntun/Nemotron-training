@@ -18,6 +18,10 @@
 #   ... tmp_train_csv_remote.py ... --inject-numeric-baseline auto
 # Optional: length/word-count structural hints for `A -> B` cipher-style few-shot rows:
 #   ... --inject-cipher-length-hint auto
+# Optional: decrypt vocabulary / word-count hints from `->` lines + query:
+#   ... --inject-encrypt-lexical-hint auto
+# Optional: equation `lhs = rhs` RHS length-shape hint:
+#   ... --inject-equation-shape-hint auto
 set -euo pipefail
 export TORCH_DISTRIBUTED_USE_LIBUV="${TORCH_DISTRIBUTED_USE_LIBUV:-0}"
 REPO="${REPO:-/home/jovyan/work/Nemotron-training}"
