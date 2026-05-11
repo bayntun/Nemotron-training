@@ -17,6 +17,7 @@ FILES = [
     "train/test_csv_numeric_baseline.py",
     "train/test_csv_cipher_length_hint.py",
     "scripts/run_v100_csv_train_4gpu.sh",
+    "scripts/analyze_eval_failures.py",
 ]
 
 
