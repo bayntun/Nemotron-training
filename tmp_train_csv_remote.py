@@ -62,7 +62,12 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="If >0, save checkpoints every N steps (enables resume). Default 0 = no mid-run saves.",
     )
-    p.add_argument("--max-new-tokens", type=int, default=64)
+    p.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=192,
+        help="Greedy generation cap for eval (raise for multi-word / long cipher answers).",
+    )
     p.add_argument("--dataloader-num-workers", type=int, default=4)
     p.add_argument("--output-dir", type=str, default="/home/jovyan/work/Nemotron-training/outputs/csv_tinyllama_mini")
     p.add_argument(
@@ -74,6 +79,16 @@ def parse_args() -> argparse.Namespace:
             "Append a short hint derived from the listed example pairs: "
             "linear least-squares for 'unit conversion' m→m′ rows, or d=k·t² for gravity tables. "
             "Applied to User text in both training and eval; not ground truth if the hidden rule differs."
+        ),
+    )
+    p.add_argument(
+        "--inject-cipher-length-hint",
+        type=str,
+        default="none",
+        choices=("none", "auto"),
+        help=(
+            "Append a structural hint when the prompt has multiple length- and word-count-preserving "
+            "`A -> B` examples and a parsable query string (cipher / string-transform family)."
         ),
     )
     return p.parse_args()
@@ -89,9 +104,11 @@ def unwrap_model(model: torch.nn.Module) -> torch.nn.Module:
 
 def main() -> int:
     args_in = parse_args()
+    from train.csv_cipher_length_hint import augment_prompt_for_cipher_length_hint
     from train.csv_numeric_baseline import augment_prompt_for_numeric_baseline
 
     strat = args_in.inject_numeric_baseline
+    cipher_strat = args_in.inject_cipher_length_hint
     train_csv = Path(args_in.train_csv)
     out_dir = Path(args_in.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -110,6 +127,7 @@ def main() -> int:
                     "train_rows": len(train_rows),
                     "eval_rows": len(test_rows),
                     "inject_numeric_baseline": strat,
+                    "inject_cipher_length_hint": cipher_strat,
                 },
                 ensure_ascii=False,
             ),
@@ -169,6 +187,7 @@ def main() -> int:
 
     def _pack_row(r: dict[str, str]) -> str:
         p = augment_prompt_for_numeric_baseline(r["prompt"], strat)  # type: ignore[arg-type]
+        p = augment_prompt_for_cipher_length_hint(p, cipher_strat)  # type: ignore[arg-type]
         return f"User: {p}\nAssistant: {r['answer']}"
 
     train_text = [_pack_row(r) for r in train_rows]
@@ -235,12 +254,14 @@ def main() -> int:
         correct_first = 0
         for row in test_rows:
             prompt = augment_prompt_for_numeric_baseline(row["prompt"], strat)  # type: ignore[arg-type]
+            prompt = augment_prompt_for_cipher_length_hint(prompt, cipher_strat)  # type: ignore[arg-type]
             gt = str(row["answer"]).strip()
             gt_first = (gt.split()[0] if gt else "").strip()
             inp = tok(f"User: {prompt}\nAssistant:", return_tensors="pt").to(dev)
             out = eval_model.generate(**inp, max_new_tokens=args_in.max_new_tokens, do_sample=False)
             gen = tok.decode(out[0][inp["input_ids"].shape[1] :], skip_special_tokens=True).strip()
             gen_line = norm_first_line(gen)
+            # `pred` is first whitespace token only (for ok_first); full line is `gen_line` / ok_full.
             pred = gen_line.split()[0] if gen_line else ""
             ok_full = gen_line == gt
             ok_first = bool(gt_first) and pred == gt_first
@@ -274,6 +295,7 @@ def main() -> int:
             "adapter_in": args_in.adapter_in or None,
             "lora_r": args_in.lora_r,
             "inject_numeric_baseline": strat,
+            "inject_cipher_length_hint": cipher_strat,
             "accuracy_full": acc_full,
             "correct_full": correct_full,
             "accuracy_first": acc_first,
