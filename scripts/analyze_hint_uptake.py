@@ -7,7 +7,7 @@ from pathlib import Path
 
 MARKERS = [
     ("numeric", "Numerical baseline"),
-    ("cipher_length", "Structural hint: each listed example"),
+    ("cipher_length", "Text-cipher structural hint:"),
     ("encrypt_lexical", "Decrypt / cipher lexical"),
     ("equation_shape", "Equation / operator puzzle"),
 ]

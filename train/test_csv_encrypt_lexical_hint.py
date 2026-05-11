@@ -17,3 +17,14 @@ Now, decrypt the following text: ee ff
 def test_encrypt_none_without_arrows() -> None:
     p = "In Alice's Wonderland, decrypt the message with no arrows"
     assert encrypt_lexical_hint(p) is None
+
+
+def test_encrypt_skips_binary_even_if_decrypt_word() -> None:
+    p = (
+        "In Wonderland, decrypt the following bit pattern.\n"
+        "Binary 8-bit examples:\n"
+        "00 -> 11\n"
+        "01 -> 10\n"
+        "Decrypt: 11\n"
+    )
+    assert encrypt_lexical_hint(p) is None

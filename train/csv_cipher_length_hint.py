@@ -1,17 +1,15 @@
 """
-Optional hints for string / cipher-style Wonderland few-shot rows.
+Length-preserving hints only for **explicitly labeled text cipher / encryption** prompts.
 
-If the prompt contains multiple `left -> right` examples where every pair preserves
-both character length and whitespace-delimited word count, we infer the same
-constraint applies to the final query string parsed from the prompt.
-
-This is structural only (no label leakage). The true cipher may still violate
-length on edge cases; the hint says to trust the examples if they conflict.
+Generic `A -> B` transformations (binary puzzles, equation-adjacent patterns, etc.)
+must NOT receive this hint — those families differ from Wonderland encrypt/decrypt copy.
 """
 from __future__ import annotations
 
 import re
 from typing import Literal
+
+from train.csv_hint_gates import is_text_cipher_labeled_prompt
 
 CipherStrategy = Literal["none", "auto"]
 
@@ -69,6 +67,8 @@ def _extract_query_string(prompt: str) -> str | None:
 
 
 def cipher_length_hint(prompt: str) -> str | None:
+    if not is_text_cipher_labeled_prompt(prompt):
+        return None
     pairs = _length_preserving_pairs(prompt)
     if len(pairs) < 2:
         return None
@@ -80,10 +80,10 @@ def cipher_length_hint(prompt: str) -> str | None:
     if n_chars == 0:
         return None
     return (
-        f"Structural hint: each listed example maps a string to another with the **same** "
-        f"character count and **same** word count as the input. "
-        f"The query string has **{n_chars}** characters and **{n_words}** word(s); "
-        f"your answer should match those counts on a single line unless the examples clearly do otherwise."
+        f"Text-cipher structural hint: each listed ciphertext→plaintext example preserves "
+        f"**same** character count and **same** word count. "
+        f"The query ciphertext has **{n_chars}** characters and **{n_words}** word(s); "
+        f"match those counts on one plaintext line unless the examples clearly do otherwise."
     )
 
 

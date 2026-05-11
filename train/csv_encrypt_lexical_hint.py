@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 from typing import Literal
 
+from train.csv_hint_gates import is_binary_style_prompt, is_text_cipher_labeled_prompt
+
 EncryptStrategy = Literal["none", "auto"]
 
 _STOP = frozenset(
@@ -67,7 +69,9 @@ def _extract_ciphertext_query(prompt: str) -> str | None:
 
 def encrypt_lexical_hint(prompt: str) -> str | None:
     pl = prompt.lower()
-    if not any(k in pl for k in ("encrypt", "decrypt", "cipher")):
+    if is_binary_style_prompt(pl):
+        return None
+    if not is_text_cipher_labeled_prompt(prompt):
         return None
     if "->" not in prompt and "→" not in prompt:
         return None

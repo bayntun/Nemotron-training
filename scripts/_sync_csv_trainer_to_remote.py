@@ -13,6 +13,7 @@ DEST = "/home/jovyan/work/Nemotron-training"
 FILES = [
     "tmp_train_csv_remote.py",
     "train/csv_numeric_baseline.py",
+    "train/csv_hint_gates.py",
     "train/csv_cipher_length_hint.py",
     "train/csv_encrypt_lexical_hint.py",
     "train/csv_equation_shape_hint.py",
@@ -21,6 +22,7 @@ FILES = [
     "train/test_csv_cipher_length_hint.py",
     "train/test_csv_encrypt_lexical_hint.py",
     "train/test_csv_equation_shape_hint.py",
+    "train/test_csv_hint_gates.py",
     "scripts/run_v100_csv_train_4gpu.sh",
     "scripts/analyze_eval_failures.py",
     "scripts/analyze_hint_uptake.py",
