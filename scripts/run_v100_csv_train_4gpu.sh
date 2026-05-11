@@ -22,6 +22,8 @@
 #   ... --inject-encrypt-lexical-hint auto
 # Optional: equation `lhs = rhs` RHS length-shape hint:
 #   ... --inject-equation-shape-hint auto
+# Optional: 8-bit binary arrow examples (`xxxxxxxx -> yyyyyyyy`):
+#   ... --inject-binary-arrow-hint auto
 set -euo pipefail
 export TORCH_DISTRIBUTED_USE_LIBUV="${TORCH_DISTRIBUTED_USE_LIBUV:-0}"
 REPO="${REPO:-/home/jovyan/work/Nemotron-training}"

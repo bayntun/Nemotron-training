@@ -107,6 +107,15 @@ def parse_args() -> argparse.Namespace:
         choices=("none", "auto"),
         help="Equation / operator rows: RHS length-shape hint from `lhs = rhs` example lines (skips encrypt prompts).",
     )
+    p.add_argument(
+        "--inject-binary-arrow-hint",
+        type=str,
+        default="none",
+        choices=("none", "auto"),
+        help=(
+            "8-bit binary `xxxxxxxx -> yyyyyyyy` puzzles: width-preserving hint + echo ops mentioned (shift/XOR/...)."
+        ),
+    )
     return p.parse_args()
 
 
@@ -126,6 +135,7 @@ def main() -> int:
     cipher_strat = args_in.inject_cipher_length_hint
     encrypt_strat = args_in.inject_encrypt_lexical_hint
     equation_strat = args_in.inject_equation_shape_hint
+    binary_strat = args_in.inject_binary_arrow_hint
     train_csv = Path(args_in.train_csv)
     out_dir = Path(args_in.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +157,7 @@ def main() -> int:
                     "inject_cipher_length_hint": cipher_strat,
                     "inject_encrypt_lexical_hint": encrypt_strat,
                     "inject_equation_shape_hint": equation_strat,
+                    "inject_binary_arrow_hint": binary_strat,
                 },
                 ensure_ascii=False,
             ),
@@ -211,6 +222,7 @@ def main() -> int:
             cipher=cipher_strat,
             encrypt=encrypt_strat,
             equation=equation_strat,
+            binary_arrow=binary_strat,
         )
         return f"User: {p}\nAssistant: {r['answer']}"
 
@@ -283,6 +295,7 @@ def main() -> int:
                 cipher=cipher_strat,
                 encrypt=encrypt_strat,
                 equation=equation_strat,
+                binary_arrow=binary_strat,
             )
             gt = str(row["answer"]).strip()
             gt_first = (gt.split()[0] if gt else "").strip()
@@ -328,6 +341,7 @@ def main() -> int:
             "inject_cipher_length_hint": cipher_strat,
             "inject_encrypt_lexical_hint": encrypt_strat,
             "inject_equation_shape_hint": equation_strat,
+            "inject_binary_arrow_hint": binary_strat,
             "accuracy_full": acc_full,
             "correct_full": correct_full,
             "accuracy_first": acc_first,

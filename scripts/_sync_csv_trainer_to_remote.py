@@ -17,16 +17,19 @@ FILES = [
     "train/csv_cipher_length_hint.py",
     "train/csv_encrypt_lexical_hint.py",
     "train/csv_equation_shape_hint.py",
+    "train/csv_binary_arrow_hint.py",
     "train/csv_prompt_augment.py",
     "train/test_csv_numeric_baseline.py",
     "train/test_csv_cipher_length_hint.py",
     "train/test_csv_encrypt_lexical_hint.py",
     "train/test_csv_equation_shape_hint.py",
+    "train/test_csv_binary_arrow_hint.py",
     "train/test_csv_hint_gates.py",
     "scripts/run_v100_csv_train_4gpu.sh",
     "scripts/analyze_eval_failures.py",
     "scripts/analyze_hint_uptake.py",
     "scripts/_launch_csv_v6_encrypt_equation_remote.py",
+    "scripts/_launch_csv_v7_binary_remote.py",
 ]
 
 

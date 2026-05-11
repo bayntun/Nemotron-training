@@ -10,6 +10,7 @@ MARKERS = [
     ("cipher_length", "Text-cipher structural hint:"),
     ("encrypt_lexical", "Decrypt / cipher lexical"),
     ("equation_shape", "Equation / operator puzzle"),
+    ("binary_arrow", "Binary arrow-rule hint:"),
 ]
 
 
@@ -32,7 +33,7 @@ def main() -> int:
         for r in fails
         if not any(sub in (r.get(pa_key) or "") for _, sub in MARKERS)
     )
-    print(f"   {'none_of_four':16} {none:4} / {len(fails)}  ({none/max(len(fails),1):.1%})")
+    print(f"   {'none_of_hints':16} {none:4} / {len(fails)}  ({none/max(len(fails),1):.1%})")
     missing_key = sum(1 for r in fails if pa_key not in r)
     if missing_key:
         print(f"\n   (rows missing '{pa_key}' field: {missing_key})")
