@@ -104,8 +104,11 @@ def parse_args() -> argparse.Namespace:
         "--inject-equation-shape-hint",
         type=str,
         default="none",
-        choices=("none", "auto"),
-        help="Equation / operator rows: RHS length-shape hint from `lhs = rhs` example lines (skips encrypt prompts).",
+        choices=("none", "auto", "auto_rulescored"),
+        help=(
+            "Equation rows (strict phrase trigger): auto = compact shape + mode hint; "
+            "auto_rulescored = auto + numeric rule-scorer line when operands are 2-digit numbers."
+        ),
     )
     p.add_argument(
         "--inject-binary-arrow-hint",
@@ -114,6 +117,14 @@ def parse_args() -> argparse.Namespace:
         choices=("none", "auto"),
         help=(
             "8-bit binary `xxxxxxxx -> yyyyyyyy` puzzles: width-preserving hint + echo ops mentioned (shift/XOR/...)."
+        ),
+    )
+    p.add_argument(
+        "--assistant-loss-only",
+        action="store_true",
+        help=(
+            "Mask labels with -100 on all tokens before the answer (after '\\nAssistant: '). "
+            "Uses left truncation so long prompts drop User-prefix tokens instead of the answer tail."
         ),
     )
     return p.parse_args()
@@ -158,6 +169,7 @@ def main() -> int:
                     "inject_encrypt_lexical_hint": encrypt_strat,
                     "inject_equation_shape_hint": equation_strat,
                     "inject_binary_arrow_hint": binary_strat,
+                    "assistant_loss_only": bool(args_in.assistant_loss_only),
                 },
                 ensure_ascii=False,
             ),
@@ -229,15 +241,57 @@ def main() -> int:
     train_text = [_pack_row(r) for r in train_rows]
     ds = Dataset.from_dict({"text": train_text})
 
+    _asst_sep = "\nAssistant: "
+    if args_in.assistant_loss_only:
+        tok.truncation_side = "left"
+
     def tokenize_fn(batch: dict[str, list[str]]) -> dict[str, list[list[int]]]:
-        out = tok(
-            batch["text"],
+        texts = batch["text"]
+        enc = tok(
+            texts,
             truncation=True,
             padding="max_length",
             max_length=args_in.max_length,
+            return_offsets_mapping=args_in.assistant_loss_only,
         )
-        out["labels"] = [x[:] for x in out["input_ids"]]
-        return out
+        input_ids = enc["input_ids"]
+        attn = enc["attention_mask"]
+        labels: list[list[int]]
+        if args_in.assistant_loss_only:
+            off_batch = enc["offset_mapping"]
+            labels = []
+            for i, text in enumerate(texts):
+                ids = input_ids[i]
+                offs = off_batch[i]
+                lab = list(ids)
+                cut = text.find(_asst_sep)
+                if cut < 0:
+                    lab = [-100] * len(ids)
+                else:
+                    answer_char = cut + len(_asst_sep)
+                    start_i: int | None = None
+                    for ti, (cs, ce) in enumerate(offs):
+                        if cs == 0 and ce == 0:
+                            continue
+                        if cs >= answer_char:
+                            start_i = ti
+                            break
+                        if cs < answer_char <= ce:
+                            start_i = ti
+                            break
+                    if start_i is None:
+                        start_i = len(ids)
+                    for j in range(start_i):
+                        lab[j] = -100
+                for j in range(len(attn[i])):
+                    if attn[i][j] == 0:
+                        lab[j] = -100
+                labels.append(lab)
+            del enc["offset_mapping"]
+        else:
+            labels = [row[:] for row in input_ids]
+        enc["labels"] = labels
+        return dict(enc)
 
     tok_ds = ds.map(tokenize_fn, batched=True, remove_columns=["text"])
 
@@ -342,6 +396,7 @@ def main() -> int:
             "inject_encrypt_lexical_hint": encrypt_strat,
             "inject_equation_shape_hint": equation_strat,
             "inject_binary_arrow_hint": binary_strat,
+            "assistant_loss_only": bool(args_in.assistant_loss_only),
             "accuracy_full": acc_full,
             "correct_full": correct_full,
             "accuracy_first": acc_first,

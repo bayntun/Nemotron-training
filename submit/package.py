@@ -13,9 +13,10 @@ Optional companion files are tolerated but ignored by vLLM:
 
 USAGE:
     python -m submit.package --adapter ./adapters/sft_baseline --out submission.zip
-    python -m submit.package --adapter ./adapters/kd_student   --out submission_kd.zip --validate
+    python -m submit.package --adapter ./adapters/kd_student   --out submission_kd.zip --no-validate
 
-The --validate flag runs sanity checks BEFORE writing the zip:
+The default is to validate before writing the zip. Pass ``--no-validate`` to skip checks.
+Validation includes:
     - adapter_config.json exists and parses as JSON
     - adapter_config.json has r <= 32 (max_lora_rank enforcement)
     - adapter_config.json target_modules is non-empty

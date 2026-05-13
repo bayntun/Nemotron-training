@@ -3,6 +3,9 @@
 **Canonical copy:** this file lives in-repo at `docs/NEMOTRON_PLAN.md`.  
 Cursor may also hold a mirror under `.cursor/plans/`; treat **this** path as the source of truth for Git history.
 
+**Execution state:** see `docs/OPERATING_MODE.md` for the day-to-day mode and gate criteria.
+This plan is strategic; `OPERATING_MODE.md` is operational.
+
 ---
 
 ## Progress snapshot (updated after Phase 0 scaffold)

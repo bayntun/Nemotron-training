@@ -1,0 +1,22 @@
+# Multi-GPU fp16 (no DeepSpeed) — works with older `accelerate` installs that reject
+# `deepspeed_config_file` in the YAML. Use for Nemotron SFT when ZeRO-2 YAML fails to load.
+#
+# Launch:
+#   accelerate launch --config_file configs/accelerate_multigpu_fp16.yaml train/sft.py ...
+
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: MULTI_GPU
+downcast_bf16: 'no'
+machine_rank: 0
+main_process_port: 0
+main_training_function: main
+mixed_precision: fp16
+num_machines: 1
+num_processes: 4
+rdzv_backend: static
+same_network: true
+tpu_env: []
+tpu_use_cluster: false
+tpu_use_sudo: false
+use_cpu: false

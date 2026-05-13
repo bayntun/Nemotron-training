@@ -43,5 +43,8 @@ python -m eval.greedy_harness \
     --base-model nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16 \
     --adapter ./adapters/sft_baseline \
     --val-jsonl ./data/cache/sft/validation.jsonl \
-    --out ./outputs/eval_sft_baseline.jsonl
+    --out ./outputs/eval_sft_baseline.jsonl \
+    --dtype float16
 ```
+
+Use ``--dtype bfloat16`` on hardware that matches the competition kernel; Volta V100 often needs ``float16``.

@@ -11,7 +11,7 @@ Example (single GPU, local SFT cache):
 Example (4× GPU + DeepSpeed ZeRO-2):
 
     accelerate launch --config_file configs/accelerate_zero2.yaml \\
-      -m train.sft --output-dir ./outputs/sft_baseline
+      train/sft.py --output-dir ./outputs/sft_baseline
 
 Prerequisites: `pip install -r requirements.txt -r requirements-train.txt`, HF token,
 accepted dataset ToS, and `python -m data.download --sft-only` unless using `--dataset-name`.
@@ -20,9 +20,7 @@ accepted dataset ToS, and `python -m data.download --sft-only` unless using `--d
 from __future__ import annotations
 
 import argparse
-import json
 import os
-import time
 import sys
 from pathlib import Path
 
@@ -32,7 +30,6 @@ try:
     from dotenv import load_dotenv
 
     load_dotenv(REPO_ROOT / ".env")
-    load_dotenv(REPO_ROOT / "bootstrap" / "secrets_local.env")
 except ImportError:
     pass
 
@@ -87,54 +84,14 @@ def _parse_args() -> argparse.Namespace:
         default=None,
         help="Comma-separated LoRA target module names (overrides default Nemotron targets).",
     )
-    p.add_argument(
-        "--mixer-lora-max-layers",
-        type=int,
-        default=None,
-        help="Train LoRA only on the first N mixer indices from train._lora.MAMBA_LAYER_INDICES (saves VRAM during adapter injection).",
-    )
-    p.add_argument(
-        "--lora-attn-fallback",
-        action="store_true",
-        help=(
-            "Train LoRA on attention q/k/v/o projections instead of Mamba mixer lines. "
-            "Not competition-canonical, but useful to validate the Nemotron+TRL+4bit pipeline."
-        ),
-    )
     p.add_argument("--no-thinking-template", action="store_true", help="Disable enable_thinking in chat template.")
-    p.add_argument("--attn-implementation", type=str, default="eager", choices=("sdpa", "eager"))
+    p.add_argument("--attn-implementation", type=str, default="sdpa", choices=("sdpa", "eager"))
     p.add_argument("--optim", type=str, default="paged_adamw_8bit")
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument(
-        "--stagger-load-seconds",
-        type=float,
-        default=0.0,
-        help="Sleep local_rank * seconds before from_pretrained to stagger 4-bit shard loading across ranks.",
-    )
-    p.add_argument(
-        "--serialize-load-by-rank",
-        action="store_true",
-        help="Force strict rank-order model loading (rank 0, then 1, ...), reducing concurrent quantization pressure.",
-    )
-    p.add_argument(
-        "--dataloader-num-workers",
-        type=int,
-        default=0,
-        help="DataLoader workers (per process). Try 2–4 on Linux to reduce GPU idle.",
-    )
     p.add_argument(
         "--dry-run",
         action="store_true",
         help="Load tokenizer + dataset only; print column stats and exit.",
-    )
-    p.add_argument(
-        "--nemotron-mamba-fused-kernels",
-        action="store_true",
-        help=(
-            "Keep Nemotron-H fused Mamba CUDA kernels (faster). Default under 4bit: disable by setting "
-            "``is_fast_path_available=False`` in ``modeling_nemotron_h`` so the torch_forward path runs; "
-            "fused kernels pass ``out_proj.weight`` into ``F.linear``, which breaks BitsAndBytes Params4bit."
-        ),
     )
     return p.parse_args()
 
@@ -181,109 +138,6 @@ def _dry_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def _force_nemotron_mamba_torch_forward_path(model=None) -> None:
-    """Fused CUDA Mamba passes raw 4bit weights into triton; Nemotron checks ``is_fast_path_available``."""
-    import importlib
-    import sys
-
-    changed = 0
-    for _name, mod in list(sys.modules.items()):
-        if not _name.endswith("modeling_nemotron_h"):
-            continue
-        if hasattr(mod, "is_fast_path_available"):
-            setattr(mod, "is_fast_path_available", False)
-            changed += 1
-    if changed == 0 and model is not None:
-        for m in model.modules():
-            if m.__class__.__name__ != "NemotronHMamba2Mixer":
-                continue
-            mod = importlib.import_module(m.__class__.__module__)
-            if hasattr(mod, "is_fast_path_available"):
-                setattr(mod, "is_fast_path_available", False)
-                changed += 1
-            break
-    if int(os.environ.get("LOCAL_RANK", "0")) == 0:
-        print(
-            json.dumps(
-                {
-                    "nemotron_mamba_path": "torch_forward",
-                    "modeling_nemotron_h_modules_patched": changed,
-                    "reason": "4bit+fused_mamba_kernel_incompatible_with_raw_out_proj_weight",
-                },
-                ensure_ascii=False,
-            ),
-            file=sys.stderr,
-            flush=True,
-        )
-
-
-def _patch_nemotron_h_moe_index_add_dtype(model=None) -> None:
-    """Upstream MoE uses zeros_like(..., dtype=topk_weights.dtype); under fp16 AMP that mismatches expert outputs."""
-    import sys
-
-    import torch
-    import torch.nn.functional as F
-
-    def moe_fixed(self, hidden_states: torch.Tensor, topk_indices: torch.Tensor, topk_weights: torch.Tensor):
-        accum_dtype = hidden_states.dtype
-        final_hidden_states = torch.zeros_like(hidden_states, dtype=accum_dtype)
-        expert_mask = F.one_hot(topk_indices, num_classes=len(self.experts))
-        expert_mask = expert_mask.permute(2, 0, 1)
-
-        for expert_idx in range(len(self.experts)):
-            expert = self.experts[expert_idx]
-            mask = expert_mask[expert_idx]
-            token_indices, weight_indices = torch.where(mask)
-
-            if token_indices.numel() > 0:
-                expert_weights = topk_weights[token_indices, weight_indices].to(dtype=accum_dtype)
-                expert_input = hidden_states[token_indices]
-                expert_output = expert(expert_input)
-                weighted_output = expert_output * expert_weights.unsqueeze(-1)
-                weighted_output = weighted_output.to(dtype=accum_dtype)
-                final_hidden_states.index_add_(0, token_indices, weighted_output)
-            else:
-                expert_dtype = expert.down_proj.weight.dtype
-                dummy_out = expert(torch.zeros_like(hidden_states[0]).unsqueeze(0).to(expert_dtype))
-                final_hidden_states = final_hidden_states + dummy_out.to(dtype=accum_dtype)
-
-        return final_hidden_states.type(hidden_states.dtype)
-
-    n = 0
-    for _name, mod in list(sys.modules.items()):
-        if not _name.endswith("modeling_nemotron_h"):
-            continue
-        cls = getattr(mod, "NemotronHMOE", None)
-        if cls is None:
-            continue
-        cls.moe = moe_fixed
-        n += 1
-    if n == 0 and model is not None:
-        import importlib
-
-        for m in model.modules():
-            if m.__class__.__name__ != "NemotronHMOE":
-                continue
-            mod = importlib.import_module(m.__class__.__module__)
-            cls = getattr(mod, "NemotronHMOE", None)
-            if cls is not None:
-                cls.moe = moe_fixed
-                n += 1
-            break
-    if n and int(os.environ.get("LOCAL_RANK", "0")) == 0:
-        print(
-            json.dumps(
-                {
-                    "nemotron_moe_patch": "index_add_dtype",
-                    "modeling_nemotron_h_modules_patched": n,
-                },
-                ensure_ascii=False,
-            ),
-            file=sys.stderr,
-            flush=True,
-        )
-
-
 def main() -> int:
     args = _parse_args()
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -292,14 +146,12 @@ def main() -> int:
         return _dry_run(args)
 
     import torch
-    from peft import LoraConfig, prepare_model_for_kbit_training
+    from peft import LoraConfig
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from trl import SFTConfig, SFTTrainer
 
     from train._dataset import load_sft_raw, normalize_messages_dataset
-    import gc
-
-    from train._lora import MAMBA_LAYER_INDICES, build_lora_config
+    from train._lora import MAMBA_LAYER_INDICES, build_lora_config, mixer_lora_target_patterns
 
     if not torch.cuda.is_available():
         print("ERROR: CUDA is required. Run on the Linux GPU server.", file=sys.stderr)
@@ -346,9 +198,6 @@ def main() -> int:
     # Using device_map="auto" under DDP can place both ranks on the same device.
     local_rank = int(os.environ.get("LOCAL_RANK", "0"))
     world_size = int(os.environ.get("WORLD_SIZE", "1"))
-
-    torch.cuda.set_device(local_rank)
-
     device_map = {"": local_rank} if world_size > 1 else "auto"
 
     model_init_kw = dict(
@@ -357,59 +206,15 @@ def main() -> int:
         trust_remote_code=True,
         attn_implementation=args.attn_implementation,
         token=hf_token,
-        low_cpu_mem_usage=True,
     )
-
-    if world_size > 1 and args.stagger_load_seconds > 0:
-        # Avoid synchronized quantized shard loading spikes on 16 GB GPUs.
-        sleep_s = max(0.0, float(args.stagger_load_seconds)) * float(local_rank)
-        if sleep_s > 0:
-            print(f"[rank{local_rank}] staggered load sleep: {sleep_s:.1f}s", file=sys.stderr, flush=True)
-            time.sleep(sleep_s)
-
-    load_sync_dir = Path("/tmp/nemotron_rank_load_sync")
-    if world_size > 1 and args.serialize_load_by_rank:
-        load_sync_dir.mkdir(parents=True, exist_ok=True)
-        if local_rank > 0:
-            prev_done = load_sync_dir / f"rank_{local_rank - 1}.done"
-            print(f"[rank{local_rank}] waiting for {prev_done}", file=sys.stderr, flush=True)
-            while not prev_done.exists():
-                time.sleep(1.0)
 
     model = AutoModelForCausalLM.from_pretrained(args.model_name_or_path, **model_init_kw)
-
-    if bnb_config.load_in_4bit and not args.nemotron_mamba_fused_kernels:
-        _force_nemotron_mamba_torch_forward_path(model)
-
-    if "nemotron" in args.model_name_or_path.lower():
-        _patch_nemotron_h_moe_index_add_dtype(model)
-
-    if world_size > 1 and args.serialize_load_by_rank:
-        (load_sync_dir / f"rank_{local_rank}.done").write_text("ok", encoding="utf-8")
-
-    gc.collect()
-    torch.cuda.empty_cache()
-
-    model = prepare_model_for_kbit_training(
-        model,
-        use_gradient_checkpointing=False,
-    )
 
     custom_targets = None
     if args.target_modules:
         custom_targets = [x.strip() for x in args.target_modules.split(",") if x.strip()]
 
-    if args.lora_attn_fallback:
-        peft_config = LoraConfig(
-            r=args.lora_r,
-            lora_alpha=args.lora_alpha,
-            lora_dropout=args.lora_dropout,
-            bias="none",
-            task_type="CAUSAL_LM",
-            target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-            init_lora_weights=args.lora_init,
-        )
-    elif custom_targets:
+    if custom_targets:
         peft_config = LoraConfig(
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
@@ -420,9 +225,6 @@ def main() -> int:
             init_lora_weights=args.lora_init,
         )
     elif args.peft_simple_targets:
-        idx = list(MAMBA_LAYER_INDICES)
-        if args.mixer_lora_max_layers is not None:
-            idx = idx[: max(0, args.mixer_lora_max_layers)]
         peft_config = LoraConfig(
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
@@ -430,43 +232,16 @@ def main() -> int:
             bias="none",
             task_type="CAUSAL_LM",
             target_modules=["in_proj", "out_proj"],
-            layers_to_transform=idx,
+            layers_to_transform=list(MAMBA_LAYER_INDICES),
             init_lora_weights=args.lora_init,
         )
     else:
-        layer_indices = None
-        if args.mixer_lora_max_layers is not None:
-            layer_indices = tuple(MAMBA_LAYER_INDICES[: max(0, args.mixer_lora_max_layers)])
         peft_config = build_lora_config(
             r=args.lora_r,
             lora_alpha=args.lora_alpha,
             lora_dropout=args.lora_dropout,
             init_lora_weights=args.lora_init,
-            layer_indices=layer_indices,
-        )
-
-    if int(os.environ.get("LOCAL_RANK", "0")) == 0:
-        tgt = (
-            "lora_attn_fallback"
-            if args.lora_attn_fallback
-            else (
-                "custom_target_modules"
-                if custom_targets
-                else ("peft_simple_mixer" if args.peft_simple_targets else "nemotron_h_mixer_regex")
-            )
-        )
-        print(
-            json.dumps(
-                {
-                    "nemotron_sft": True,
-                    "base_model": args.model_name_or_path,
-                    "lora_rank": args.lora_r,
-                    "lora_target_mode": tgt,
-                },
-                ensure_ascii=False,
-            ),
-            file=sys.stderr,
-            flush=True,
+            target_modules=mixer_lora_target_patterns(),
         )
 
     # Nemotron-H: gradient checkpointing unsupported — TRL defaults True; force off.
@@ -488,8 +263,6 @@ def main() -> int:
         packing=False,
         seed=args.seed,
         report_to=[],
-        dataloader_num_workers=args.dataloader_num_workers,
-        dataloader_pin_memory=torch.cuda.is_available(),
     )
 
     trainer = SFTTrainer(

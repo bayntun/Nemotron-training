@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import subprocess
 import time
@@ -52,8 +53,10 @@ def run_case(case: dict[str, int]) -> dict:
         "--dtype",
         "fp16",
     ]
+    env = os.environ.copy()
+    env.setdefault("TORCH_DISTRIBUTED_USE_LIBUV", "0")
     t0 = time.perf_counter()
-    p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True)
+    p = subprocess.run(cmd, cwd=REPO, capture_output=True, text=True, env=env)
     elapsed = time.perf_counter() - t0
     record = {"case": case, "elapsed_s": round(elapsed, 2), "returncode": p.returncode}
     if p.returncode == 0:

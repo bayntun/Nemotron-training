@@ -6,6 +6,9 @@ Submission pipeline for the [NVIDIA Nemotron Model Reasoning Challenge](https://
 Best Data/Synthetic Data Method Open Contribution Award) or Path A (top 5-8
 final leaderboard via cascade for solo competitors).
 
+**Current operating mode:** [docs/OPERATING_MODE.md](docs/OPERATING_MODE.md)  
+(this tells future AI whether we are still experimental or in submission mode).
+
 **Plan document (in-repo):** [docs/NEMOTRON_PLAN.md](docs/NEMOTRON_PLAN.md).
 
 ## Repo layout

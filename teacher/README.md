@@ -10,6 +10,10 @@ DeepSeek V3.2 teacher CoT generation for Phase 2.
 - **`smoke_test.py`** — ~$0.001 round-trip that validates the API key, the
   endpoint, and that our local grader's `extract_final_answer` parses the
   model's output correctly. Run during Phase 0.
+- **`gemini_smoke_test.py`** — same grader check for **Google Gemini** (AI Studio
+  key: `GEMINI_API_TOKEN`, `GEMINI_API_KEY`, or `GOOGLE_API_KEY`). Optional
+  alternative to DeepSeek for verified synthetic data; override model with
+  `GEMINI_SMOKE_MODEL` (default `gemini-2.5-flash`).
 
 ## One-time setup
 
@@ -23,6 +27,16 @@ DeepSeek V3.2 teacher CoT generation for Phase 2.
 ```powershell
 python -m teacher.smoke_test
 ```
+
+### Gemini (optional)
+
+```powershell
+python teacher/gemini_smoke_test.py
+```
+
+If `gemini-2.0-flash` hits free-tier quota errors, set e.g.
+`$env:GEMINI_SMOKE_MODEL='gemini-2.5-flash'` (or another model from the
+ListModels API for your key).
 
 Expected output: a non-empty completion, a `\boxed{42}` answer, and
 `Grader verdict: CORRECT`. If the verdict is `WRONG` but the completion is

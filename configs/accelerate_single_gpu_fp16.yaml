@@ -1,0 +1,14 @@
+# Single-GPU fp16 (no DDP). Safer on 4×32GB nodes where four concurrent Nemotron-30B
+# shard loads can trigger SIGKILL (host RAM / loader contention).
+#
+#   accelerate launch --config_file configs/accelerate_single_gpu_fp16.yaml -m train.sft ...
+
+compute_environment: LOCAL_MACHINE
+debug: false
+distributed_type: 'NO'
+downcast_bf16: 'no'
+machine_rank: 0
+main_training_function: main
+mixed_precision: fp16
+num_machines: 1
+use_cpu: false

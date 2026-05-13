@@ -74,7 +74,7 @@ def load_sft_raw(*, dataset_dir: Path | None, hub_id: str | None, hf_token: str 
         raise FileNotFoundError(f"dataset_dir not found: {root}")
 
     parquet = sorted(root.rglob("*.parquet"))
-    jsonl = sorted(root.rglob("*.jsonl"))
+    jsonl_all = sorted(root.rglob("*.jsonl"))
     json_files = sorted(root.rglob("*.json"))
 
     if parquet:
@@ -82,13 +82,37 @@ def load_sft_raw(*, dataset_dir: Path | None, hub_id: str | None, hf_token: str 
         print(f"Loading {len(paths)} parquet shard(s) under {root}", file=sys.stderr)
         return load_dataset("parquet", data_files=paths, split="train")
 
-    if jsonl:
-        if len(jsonl) > 1:
-            paths = [str(p) for p in jsonl]
+    if jsonl_all:
+        train_jsonl = root / "train.jsonl"
+        if train_jsonl.is_file():
+            print(f"Loading jsonl {train_jsonl}", file=sys.stderr)
+            return load_dataset("json", data_files=str(train_jsonl), split="train")
+        train_shards = sorted(root.glob("train-*.jsonl"))
+        if train_shards:
+            paths = [str(p) for p in train_shards]
+            print(f"Loading {len(paths)} train shard(s) under {root}", file=sys.stderr)
+            return load_dataset("json", data_files=paths, split="train")
+        jsonl = [p for p in jsonl_all if p.parent == root]
+        if len(jsonl) == 1:
+            print(f"Loading jsonl {jsonl[0]}", file=sys.stderr)
+            return load_dataset("json", data_files=str(jsonl[0]), split="train")
+        jsonl_train = [
+            p
+            for p in jsonl_all
+            if "val" not in p.name.lower()
+            and "eval" not in p.name.lower()
+            and "greedy" not in p.name.lower()
+        ]
+        if len(jsonl_train) == 1:
+            print(f"Loading jsonl {jsonl_train[0]}", file=sys.stderr)
+            return load_dataset("json", data_files=str(jsonl_train[0]), split="train")
+        if len(jsonl_train) > 1:
+            paths = [str(p) for p in sorted(jsonl_train)]
             print(f"Loading {len(paths)} jsonl file(s) under {root}", file=sys.stderr)
             return load_dataset("json", data_files=paths, split="train")
-        print(f"Loading jsonl {jsonl[0]}", file=sys.stderr)
-        return load_dataset("json", data_files=str(jsonl[0]), split="train")
+        paths = [str(p) for p in jsonl_all]
+        print(f"Loading {len(paths)} jsonl file(s) under {root}", file=sys.stderr)
+        return load_dataset("json", data_files=paths, split="train")
 
     if json_files:
         print(f"Loading json {json_files[0]}", file=sys.stderr)

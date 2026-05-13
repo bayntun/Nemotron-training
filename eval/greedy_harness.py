@@ -95,6 +95,7 @@ def run_eval(
     adapter_dir: Path | None,
     records: list[dict],
     out_path: Path,
+    dtype: str = "bfloat16",
 ) -> dict:
     """Greedy decode every record and score with the local grader. Returns summary."""
     # Heavy imports kept inside the function so this module is importable on
@@ -111,7 +112,7 @@ def run_eval(
         model=base_model,
         enable_lora=adapter_dir is not None,
         trust_remote_code=True,
-        dtype="bfloat16",
+        dtype=dtype,
         **KERNEL_PARAMS,
     )
 
@@ -179,6 +180,13 @@ def main() -> int:
     parser.add_argument("--adapter", type=Path, default=None, help="Optional PEFT LoRA adapter dir")
     parser.add_argument("--val-jsonl", type=Path, required=True, help="JSONL with {id, prompt, ground_truth, category}")
     parser.add_argument("--out", type=Path, default=Path("outputs/eval.jsonl"))
+    parser.add_argument(
+        "--dtype",
+        type=str,
+        default="bfloat16",
+        choices=("bfloat16", "float16"),
+        help="vLLM model dtype. Kaggle-style Blackwell uses bf16; V100 boxes often need float16.",
+    )
     args = parser.parse_args()
 
     if not args.val_jsonl.is_file():
@@ -186,7 +194,7 @@ def main() -> int:
         return 1
 
     records = _load_jsonl(args.val_jsonl)
-    summary = run_eval(args.base_model, args.adapter, records, args.out)
+    summary = run_eval(args.base_model, args.adapter, records, args.out, dtype=args.dtype)
 
     print()
     print("=" * 60)

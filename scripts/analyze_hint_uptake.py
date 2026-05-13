@@ -9,7 +9,7 @@ MARKERS = [
     ("numeric", "Numerical baseline"),
     ("cipher_length", "Text-cipher structural hint:"),
     ("encrypt_lexical", "Decrypt / cipher lexical"),
-    ("equation_shape", "Equation / operator puzzle"),
+    ("equation_shape", "Equation shape:"),
     ("binary_arrow", "Binary arrow-rule hint:"),
 ]
 
